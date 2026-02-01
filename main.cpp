@@ -49,7 +49,7 @@ void SendError(SOCKET s, int code, string& reason)
 	ostringstream oss;
 	oss << "HTTP/1.1 " << code << reason << "\r\n"
 		<< "Connection: close\r\n"
-		<< "Context - length: " << body.size() << "\r\n"
+		<< "Content-length: " << body.size() << "\r\n"
 		<< "Content-type: text/html"
 		<< "\r\n\r\n"
 		<< body;
