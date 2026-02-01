@@ -1,10 +1,12 @@
-﻿#include <iostream>
+#include <iostream>
 #include <string>
 #include <winsock.h>
 #include <sstream>
 #include <fstream>
 #include <filesystem>
 #include <vector>
+#include <direct.h>
+#include <windows.h>
 #pragma comment(lib, "wsock32.lib")
 
 //#define SERVER_PORT 5000
@@ -17,6 +19,24 @@ void ExitWithError(const string& message)
 	cout << message << "Error code:" << WSAGetLastError() << endl;
 	WSACleanup();
 	exit(1);
+}
+
+//mora da se koristi jer send() ne garantuje da ce se poslati svi bajtovi
+int sendAll(SOCKET s, const char* data, int len)
+{
+	int total = 0; //koliko je bajtova do sada uspesno poslato
+
+	while (total < len) //dok se svi bajtovi ne posalju
+	{
+		int n = send(s, data + total, len - total, 0); //data+total - odakle pocinje slanje //len - total koliko podataka se salje
+
+		if (n == SOCKET_ERROR)
+			return SOCKET_ERROR;
+
+		total += n;
+	}
+
+	return total;
 }
 
 bool RecvHttpHeader(SOCKET s, string& header)
@@ -47,9 +67,9 @@ void SendError(SOCKET s, int code, string& reason)
 	string body = to_string(code) + reason;
 
 	ostringstream oss;
-	oss << "HTTP/1.1 " << code << reason << "\r\n"
+	oss << "HTTP/1.1 " << code << " " << reason << "\r\n"
 		<< "Connection: close\r\n"
-		<< "Content-length: " << body.size() << "\r\n"
+		<< "Content-Length: " << body.size() << "\r\n"
 		<< "Content-type: text/html"
 		<< "\r\n\r\n"
 		<< body;
@@ -59,7 +79,7 @@ void SendError(SOCKET s, int code, string& reason)
 	sendAll(s, recp.c_str(), (int)recp.size());
 }
 
-bool CheckFirstLine(string header, string first, string second, string third) //treba & ? Ali javlja se sintaksna greska..
+bool CheckFirstLine(const string& header, string& first, string& second, string& third) //treba & ? Ali javlja se sintaksna greska..
 {
 	size_t line = header.find("\r\n");
 	if (line == string::npos)
@@ -103,7 +123,7 @@ bool FileExists(string& filePath)
 	return f.good();
 }
 
-bool ReadFileBytes(string& filePath, vector<char> bytes)
+bool ReadFileBytes(string& filePath, vector<char>& bytes)
 {
 	ifstream f(filePath, ios::binary);
 
@@ -118,6 +138,7 @@ bool ReadFileBytes(string& filePath, vector<char> bytes)
 		return false;
 
 	bytes.resize((size_t)sz); //vector dobija velicinu sz
+	f.seekg(0, ios::beg); //vrati pokazivac na pocetak
 
 	if (sz > 0) //ako je prazan nema sta da se cita, ako ima procita sz bajtova i smesti u vector
 	{
@@ -128,32 +149,21 @@ bool ReadFileBytes(string& filePath, vector<char> bytes)
 	return true;
 }
 
-//mora da se koristi jer send() ne garantuje da ce se poslati svi bajtovi
-int sendAll(SOCKET s, const char* data, int len)
+void sendpng(SOCKET s, const vector<char>& bytes)
 {
-	int total = 0; //koliko je bajtova do sada uspesno poslato
+	ostringstream oss;
+	oss << "HTTP/1.1 200 OK\r\n"
+		<< "Connection: close\r\n"
+		<< "Content-Length: " << bytes.size() << "\r\n"
+		<< "Content-Type: text/html\r\n"
+		<< "\r\n";
 
-	while (total < len) //dok se svi bajtovi ne posalju
-	{
-		int n = send(s, data + total, len - total, 0); //data+total - odakle pocinje slanje //len - total koliko podataka se salje
+	string header = oss.str();
 
-		if (n == SOCKET_ERROR)
-			return SOCKET_ERROR;
-
-		total += n;
-	}
-
-	return total;
-}
-
-void sendpng(SOCKET s, const string& header, const vector<char>& bytes)
-{
-	if (!header.empty())
-		sendAll(s, header.data(), (int)header.size());
+	sendAll(s, header.data(), (int)header.size());
 
 	if (!bytes.empty())
 		sendAll(s, bytes.data(), (int)bytes.size());
-
 
 }
 
@@ -260,7 +270,7 @@ int main()
 		}
 
 		//7) Ucitaj fajl i posalji 200 + png
-		vector<char> bytes;
+		vector<char> bytes; //deo body-ja su bajtovi, pa ne moze string nego se koristi vector<char>
 		if (!ReadFileBytes(filePath, bytes))
 		{
 			string msg = "Not Found!";
@@ -269,7 +279,7 @@ int main()
 			continue;
 		}
 
-		sendpng(clientSock, header, bytes); //ako je sve uredu posalji sliku tj header+bytes
+		sendpng(clientSock, bytes); //ako je sve uredu posalji sliku tj header+bytes
 
 		closesocket(clientSock);
 
