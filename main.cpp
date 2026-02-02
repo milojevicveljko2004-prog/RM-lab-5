@@ -5,8 +5,6 @@
 #include <fstream>
 #include <filesystem>
 #include <vector>
-#include <direct.h>
-#include <windows.h>
 #pragma comment(lib, "wsock32.lib")
 
 //#define SERVER_PORT 5000
