@@ -5,6 +5,8 @@
 #include <fstream>
 #include <filesystem>
 #include <vector>
+#include <iomanip>
+#include <ctime>
 #pragma comment(lib, "wsock32.lib")
 
 //#define SERVER_PORT 5000
@@ -147,6 +149,27 @@ bool ReadFileBytes(string& filePath, vector<char>& bytes)
 	return true;
 }
 
+//bool GetDatum(const string& header, const string& key, string date)
+//{
+//	istringstream iss(header);
+//	string line;
+//
+//	while (getline(iss, line)) //uzima liniju po liniju iz headera dok ne nadje key
+//	{
+//		if (!line.empty() && line.back() == '\r')
+//			line.pop_back(); //skini "\r" sa kraja
+//
+//		if (line.rfind(key, 0) == 0) //ako linija pocinje sa key:
+//		{
+//			date = line.substr(key.size()); //uzmi deo posle key
+//
+//			return true;
+//		}
+//	}
+//
+//	return false;
+//}
+
 void sendpng(SOCKET s, const vector<char>& bytes)
 {
 	ostringstream oss;
@@ -267,7 +290,21 @@ int main()
 			continue;
 		}
 
-		//7) Ucitaj fajl i posalji 200 + png
+		//7) Proveri uslov zadatka - da li je slika modifikovana nakon 10.12.2020
+		//string date;
+		//if (GetDatum(header, "If-Modified-Since: ", date)) //prvo proverava da li uopste postoji datum u zahtevu
+		//{
+		     //nako nsto se dobije datum to je samo string, treba da se parsuje u datum pa da se poredi sa datumom uslova
+		//}
+		//else
+		//{
+		//	string msg = "Datum nije pronadjen u HTTP zahtevu klijenta";
+		//	SendError(clientSock, 400, msg);
+		//	closesocket(clientSock);
+		//	continue;
+		//}
+
+		//8) Ucitaj fajl i posalji 200 + png
 		vector<char> bytes; //deo body-ja su bajtovi, pa ne moze string nego se koristi vector<char>
 		if (!ReadFileBytes(filePath, bytes))
 		{
