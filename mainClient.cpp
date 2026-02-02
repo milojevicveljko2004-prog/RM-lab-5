@@ -22,6 +22,7 @@ void SendRequest(SOCKET s, const string& path)
 
 	os << "GET " << path << " HTTP/1.1\r\n"
 		<< "Connection: close\r\n"
+		<< "If-Modified-Since: Thu, 10 Dec 2020 00:00:00 GMT\r\n"
 		<< "User - agent: Mozilla / 4.0\r\n"
 		<< "Accept: text/html, image/gif, image/jpeg\r\n"
 		<< "Accept-language:fr\r\n\r\n";
@@ -271,3 +272,4 @@ int main()
 	WSACleanup();
 	return 0;
 }
+
